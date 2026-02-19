@@ -19,8 +19,8 @@
 プロジェクトルートに `.env` ファイルを作成し、取得したGoogle Maps APIキーを設定してください。
 
 ```bash
-git clone https://github.com/tpu-medialab/atsugiCrop.git
-cd atsugiCrop
+git clone https://github.com/tpu-medialab/go_shelter_safe.git
+cd go_shelter_safe
 
 # .env ファイルの作成
 echo "GOOGLE_MAPS_API_KEY=YOUR_API_KEY_HERE" > .env
@@ -48,8 +48,8 @@ https://www.mega.t-kougei.ac.jp/media/
 - Instagram: https://www.instagram.com/tsuyoshi.moriyama
 
 ##
-@misc{atsugiCrop2026,
-  title     = {atsugiCrop},
+@misc{go_shelter_safe2026,
+  title     = {go_shelter_safe},
   author    = {Yuki Hitomi and Koya Arashiro ,Tsuyoshi Moriyama},
   year      = {2026},
   url       = {[https://github.com/tpu-medialab/go_shelter_safe/]}
