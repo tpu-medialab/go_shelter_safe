@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>toomawari</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="styles.css" >
+    <script src="map_logic.js"></script>
+    <script 
+        src="https://maps.googleapis.com/maps/api/js?key=[your APIkey]&callback=initMap&libraries=marker,geometry,routes"
+        async defer loading="async">
+    </script>
+</head>
+<body>
+    <h1 style="text-align: center;">避難経路探索</h1>
+    <div id="nearest-info">
+        <p><strong>現在地：</strong></strong><input type="text" id="start" value="本厚木駅北口" placeholder="例: 現在地、新宿駅" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"></p>
+        <p><strong>避難先:</strong> <span id="nearest-shelter-name">計算中...</span></p>
+        <button id="show-route-button" onclick="showRouteToNearest()" id="search-button" disabled style="padding: 10px 20px; background-color: #0011f8; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            ルート
+        </button>
+        <div id="route-details" style="margin-top: 10px; font-weight: bold; color: #2f00ff;"></div>
+    </div>
+
+    <div id="map"></div>
+
+</body>
+</html>

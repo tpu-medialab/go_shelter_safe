@@ -1,0 +1,46 @@
+/* styles.css */
+
+h1 {
+    text-align: center;
+}
+
+#map {
+    height: 600px;
+    width: 80%;
+    margin: 20px auto;
+    border: 1px solid #ccc;
+}
+
+#nearest-info {
+    width: 80%;
+    margin: 20px auto 10px;
+    padding: 15px;
+    /*border: 2px solid #2f00ff;
+    background-color: #fff3e0;*/
+    
+    border-radius: 5px;
+    font-size: 1.1em;
+}
+
+/* ルート表示ボタンのスタイル */
+#show-route-button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* ボタン無効時のスタイル */
+#show-route-button:disabled {
+    background-color: #ccc !important;
+    cursor: not-allowed;
+}
+
+/* ルート詳細情報のスタイル */
+#route-details {
+    margin-top: 10px;
+    font-weight: bold;
+    color: #D32F2F;
+}
