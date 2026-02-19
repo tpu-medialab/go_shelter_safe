@@ -1,4 +1,3 @@
-
 //サーバー設定に合わせてデータファイルのパスを変更
 const DATA_FILE = '/data/map_data.json'; 
 const FLOODING_FILES = [
@@ -7,51 +6,126 @@ const FLOODING_FILES = [
     //'/data/',
 ];
 
-let map;
-let infoWindow; 
-let nearestShelter = null; 
-let directionsService;
-let directionsRenderer;
-
-// Geolocation APIの使用を取りやめ、固定の現在地のみを使用
+// 初期固定の現在地の設定
 const FIXED_CURRENT_LOCATION = { 
     lat: 35.44004536203736,
     lng: 139.3644045490304, 
     title: "本厚木駅北口広場" // 厚木市内の固定位置
 };
 
+let map;
+let infoWindow; 
+let nearestShelter = null; 
+let directionsService;
+let directionsRenderer;
+let geocoder;
+let currentLocationMarker = null;
+let currentLocation = FIXED_CURRENT_LOCATION;
 
 /**
  * Google Maps APIのロード完了後に呼び出される初期化関数
  */
-function initMap() {
-    const initialCenter = FIXED_CURRENT_LOCATION;
+async function initMap() {
+    const { Map } = await google.maps.importLibrary("maps");
     
-    map = new google.maps.Map(document.getElementById('map'), {
+    map = new Map(document.getElementById("map"), {
         zoom: 14, 
-        center: initialCenter,
+        center: currentLocation,
         mapId: "DEMO_MAP_ID" // デモ用Map ID
     });
+    
+    // ジオコーディングサービスを初期化
     
     infoWindow = new google.maps.InfoWindow();
     directionsService = new google.maps.DirectionsService();
     directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
 
-    // ジオコーディングサービスを初期化
-    geocoder = new google.maps.Geocoder(); // 変更点
-
-    drawFixedCurrentLocationMarker(initialCenter);
+    drawFixedCurrentLocationMarker(currentLocation);
 
     map.data.setStyle(styleFeature);
 
     loadDataAndDrawMarkers(); 
-    loadFloodingData(); //変更点
+    loadFloodingData();
+    geocoder = new google.maps.Geocoder(); 
+    console.log("地図の初期化が完了しました。");
+ 
+}
+
+
+
+/**
+ * 入力された住所を座標に変換し、最寄りの避難所を再計算する
+ */
+async function updateCurrentLocationFromInput() {
+    const address = document.getElementById('start').value;
+    
+    // geocoderが準備できているかチェック
+    if (!geocoder) {
+        geocoder = new google.maps.Geocoder();
+    }
+
+    return new Promise((resolve, reject) => {
+        geocoder.geocode({ address: address }, (results, status) => {
+            if (status === 'OK') {
+                // 座標を更新
+                const newPos = {
+                    lat: results[0].geometry.location.lat(),
+                    lng: results[0].geometry.location.lng(),
+                    title: address
+                };
+                currentLocation = newPos;
+                
+                // 地図の中心を移動し、現在地マーカーを再描画
+                if (map) {
+                    map.setCenter(newPos);
+                    drawFixedCurrentLocationMarker(newPos);
+                
+                    resolve(newPos);
+                }
+            } else {
+                alert('場所が見つかりませんでした: ' + status);
+                reject(status);
+            }
+        });
+    });
+}
+
+/**
+ * ボタンが押された時のメイン処理
+ */
+async function handleSearchClick() {
+    try {
+        // 1. 入力された住所から座標を取得
+        const newPos = await updateCurrentLocationFromInput();
+        
+        //古いピンを消す
+        drawFixedCurrentLocationMarker(newPos);
+
+        // 新しい現在地から、全避難所データを読み込み直して最寄りを再計算
+        const locations = await loadShelterData();
+        if (locations) {
+            // findNearestShelter内で currentLocation を使うように修正が必要（後述）
+            nearestShelter = findNearestShelter(locations);
+            updateNearestShelterUI(nearestShelter);
+            
+            //  ルートを表示
+            showRouteToNearest();
+        }
+    } catch (error) {
+        console.error("検索プロセス中にエラーが発生しました:", error);
+    }
 }
 
 /**
  * 現在地のマーカーを描画
  */
 function drawFixedCurrentLocationMarker(pos) {
+    
+    //既にマーカが表示されているなら無くす
+    if (currentLocationMarker) {
+        currentLocationMarker.map = null; 
+    }
+
     // カスタムピン要素を作成（緑色）
     const pinContent = new google.maps.marker.PinElement({ 
         background: '#4CAF50', // 緑
@@ -60,7 +134,7 @@ function drawFixedCurrentLocationMarker(pos) {
         scale: 1.2
     }).element;
 
-    const currentLocationMarker = new google.maps.marker.AdvancedMarkerElement({
+    currentLocationMarker = new google.maps.marker.AdvancedMarkerElement({
         map: map,
         position: pos,
         title: pos.title,
@@ -68,7 +142,7 @@ function drawFixedCurrentLocationMarker(pos) {
     });
     
     currentLocationMarker.addListener('click', () => {
-        infoWindow.setContent(`<div style="padding: 10px;"><h3>${pos.title} (固定現在地)</h3><p>緯度: ${pos.lat.toFixed(4)}, 経度: ${pos.lng.toFixed(4)}</p></div>`);
+        infoWindow.setContent(`<div style="padding: 10px;"><h3>${pos.title} (現在地)</h3><p>緯度: ${pos.lat.toFixed(4)}, 経度: ${pos.lng.toFixed(4)}</p></div>`);
         infoWindow.open(map, currentLocationMarker);
     });
 }
@@ -99,7 +173,7 @@ async function loadShelterData() {
         return null;
     }
 }
-//---------------------変更点-----
+
 
 /**
  * 複数のGeoJSON浸水データを並行で読み込み、Dataレイヤーに追加する
@@ -202,7 +276,7 @@ function styleFeature(feature) {
     fillOpacity: 0.7  // 透明度
   };
 }
-//--------------------------
+
 
 /**
  * 避難所データに基づいて地図上にマーカーを描画する (マーカー描画の責務)
@@ -270,7 +344,6 @@ function updateNearestShelterUI(nearestShelter) {
     document.getElementById('show-route-button').disabled = false;
 }
 
-
 /**
  * データの処理結果をハンドリングし、状態を更新する (State Management & Orchestrationの責務)
  * データを計算し、結果に基づいて描画・UI更新を実行する。
@@ -314,12 +387,12 @@ async function loadDataAndDrawMarkers() {
 }
         
 /**
- * 固定現在地から最も近い浸水に適した避難所を計算する
+ * 現在地から最も近い浸水に適した避難所を計算する
  * @param {Array<Object>} shelters - 避難所データの配列
  * @returns {Object} 最も近い避難所データ
  */
 function findNearestShelter(shelters) {
-    const currentPos = FIXED_CURRENT_LOCATION; 
+    const currentPos = currentLocation; 
     let minDistance = Infinity;
     let nearest = null;
 
@@ -378,7 +451,7 @@ function calculateRoute(destination) {
     return new Promise((resolve, reject) => {
         // ルート検索リクエストの設定
         const request = {
-            origin: new google.maps.LatLng(FIXED_CURRENT_LOCATION.lat, FIXED_CURRENT_LOCATION.lng), 
+            origin: new google.maps.LatLng(currentLocation.lat, currentLocation.lng), 
             destination: new google.maps.LatLng(destination.lat, destination.lng),
             travelMode: google.maps.TravelMode.WALKING, // 避難経路なので徒歩を指定
             unitSystem: google.maps.UnitSystem.METRIC, // メートル法を指定
